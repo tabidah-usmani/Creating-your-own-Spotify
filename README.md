@@ -47,3 +47,16 @@ train_embedding_model(), recommend_songs()
 Custom PyTorch dataset and model classes are used for handling song features.
 train_embedding_model(): Trains the model using song features.
 recommend_songs(): Generates song recommendations based on the trained model.
+
+## Challenges and Solutions
+Data Scalability: Managing the large size of the FMA dataset was challenging. Utilizing Spark and MongoDB allowed efficient handling and processing of large datasets.
+Feature Selection: Determining which features were most effective for recommendations required extensive testing and validation.
+
+
+## Conclusion and Future Work
+This project successfully demonstrates the capability to build a music recommendation system. Future work could explore the integration of more complex algorithms and real-time data processing to enhance recommendation accuracy.
+
+## Credits
+[Amna Javaid]
+[Maryam Khalid]
+[Tabidah Usmani]
