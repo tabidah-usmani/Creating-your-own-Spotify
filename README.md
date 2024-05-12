@@ -27,3 +27,23 @@ MongoClient('mongodb://localhost:27017/')
 pd.merge()
 MongoClient: Connects to the local MongoDB database.
 pd.merge(): Merges feature data with metadata ensuring all information is comprehensively integrated.
+
+## Feature Extraction
+### feature_extraction.py
+Purpose: Extracts essential audio features using librosa for analyzing and recommending music.
+
+Key Functions:
+librosa.load(), librosa.feature.mfcc(), librosa.feature.spectral_centroid(), librosa.feature.zero_crossing_rate()
+These functions extract MFCCs, spectral centroid, and zero-crossing rate, which are critical for understanding and processing audio data.
+
+
+## Model Training and Recommendations
+### training_model.py
+Purpose: Trains a neural network to learn song features and recommend songs based on user preferences.
+
+Key Functions:
+torch.utils.data.Dataset, torch.nn.Module
+train_embedding_model(), recommend_songs()
+Custom PyTorch dataset and model classes are used for handling song features.
+train_embedding_model(): Trains the model using song features.
+recommend_songs(): Generates song recommendations based on the trained model.
