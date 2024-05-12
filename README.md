@@ -58,8 +58,8 @@ Feature Selection: Determining which features were most effective for recommenda
 This project successfully demonstrates the capability to build a music recommendation system. Future work could explore the integration of more complex algorithms and real-time data processing to enhance recommendation accuracy.
 
 ## Credits
-[Amna Javaid]
+Amna Javaid
 
-[Maryam Khalid]
+Maryam Khalid
 
-[Tabidah Usmani]
+Tabidah Usmani
