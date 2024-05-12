@@ -1,21 +1,16 @@
-# Load_Data.py
+from pyspark.sql import SparkSession  
 
-from pyspark.sql import SparkSession
-
-# Create Spark session
+# creates Spark session
 spark = SparkSession.builder \
     .appName("LoadAudioData") \
     .getOrCreate()
 
-# Load audio files
+# loads audio files into DataFrame
 df = spark.read.format("binaryFile") \
     .load("file:///media/mary/New Volume/sample_audio/")
 
-# Display data
+# displays loaded data
 df.show()
 
-# Stop Spark session
+# stops the Spark session to free resources
 spark.stop()
-
-
-
