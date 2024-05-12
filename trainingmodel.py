@@ -4,32 +4,32 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from pymongo import MongoClient
 
-# Custom Dataset for Song Features from MongoDB
+# custom dataset for song features from MongoDB
 class SongFeaturesDataset(Dataset):
-    def _init(self, features):  # Corrected from _init to _init_
+    def __init__(self, features):  # initializes the dataset with features
         self.features = features
 
-    def _len(self):  # Corrected from _len to _len_
+    def __len__(self):  # returns the number of samples in the dataset
         return len(self.features)
 
-    def _getitem(self, idx):  # Corrected from _getitem to _getitem_
+    def __getitem__(self, idx):  # retrieves a sample at the given index
         return torch.tensor(self.features[idx], dtype=torch.float32)
 
-# Neural Network Model for Learning Song Embeddings
+# neural network model for learning song embeddings
 class FeatureEmbeddingModel(nn.Module):
-    def _init(self, input_dim, embedding_dim=64):  # Corrected from _init to _init_
-        super(FeatureEmbeddingModel, self)._init()  # Corrected from _init to _init_
+    def __init__(self, input_dim, embedding_dim=64):  # initializes the neural network model
+        super(FeatureEmbeddingModel, self).__init__()
         self.fc1 = nn.Linear(input_dim, 128)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(128, embedding_dim)
 
-    def forward(self, x):
+    def forward(self, x):  # defines the forward pass of the model
         x = self.fc1(x)
         x = self.relu(x)
         x = self.fc2(x)
         return x
 
-# Connect to MongoDB and fetch features
+# connects to MongoDB and fetches features
 def get_features_from_mongodb():
     client = MongoClient('localhost', 27017)
     db = client['audio_features']
@@ -40,15 +40,13 @@ def get_features_from_mongodb():
     else:
         print(f"Retrieved {len(data)} records.")
 
-    # Assuming each document structure as described and mfcc, spectral_centroid, zero_crossing_rate are stored as lists
+    # assuming each document structure as described and extracts concatenated features
     features = [np.concatenate([item['mfcc'], item['spectral_centroid'], item['zero_crossing_rate']])
                 for item in data if 'mfcc' in item and 'spectral_centroid' in item and 'zero_crossing_rate' in item]
     
     return np.array(features)
 
-
-
-# Train the Embedding Model
+# trains the embedding model
 def train_embedding_model(features, epochs=10, batch_size=16):
     dataset = SongFeaturesDataset(features)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -67,7 +65,7 @@ def train_embedding_model(features, epochs=10, batch_size=16):
         print(f"Epoch {epoch+1}, Loss: {loss.item()}")
     return model
 
-# Recommend Songs
+# recommends songs
 def recommend_songs(model, features, song_index, top_n=5):
     model.eval()
     with torch.no_grad():
@@ -77,7 +75,7 @@ def recommend_songs(model, features, song_index, top_n=5):
     most_similar_ids = np.argsort(similarities)[::-1][1:top_n+1]
     return most_similar_ids
 
-# Main function
+# main function
 def main():
     features = get_features_from_mongodb()
     if features.size == 0:
@@ -85,10 +83,9 @@ def main():
         return
     print(f"Features shape: {features.shape}")
     model = train_embedding_model(features, epochs=10)
-    song_index = 1  # Adjust based on your data
+    song_index = 1  
     recommended_ids = recommend_songs(model, features, song_index)
     print("Recommended Song IDs:", recommended_ids)
 
-
-if _name_ == "_main":  # Corrected from _name to _name_ and main to _main_
+if __name__ == "__main__":
     main()
