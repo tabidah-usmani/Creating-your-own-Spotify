@@ -1,118 +1,92 @@
-from flask import Flask, render_template, Response
-from torch.utils.data import Dataset, DataLoader
-from model import FeatureEmbeddingModel
-import torch
-import numpy as np
-from pymongo import MongoClient
-from pydub import AudioSegment
+from flask import Flask, render_template, send_from_directory
+import pandas as pd
 import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__)
 
-# Custom Dataset for Song Features from MongoDB
-class SongFeaturesDataset(Dataset):
-    def __init__(self, features):  
-        self.features = features
+# Define the directory where text files are stored
+input_dir = ('/home/tabidah/kafka/project/amna-project/songs_files_by_album')
+audio_dir = ('/home/tabidah/kafka/project/sample_audio')
+csv_data = pd.read_csv("/home/tabidah/kafka/project/merged_data.csv")
 
-    def __len__(self):  
-        return len(self.features)
 
-    def __getitem__(self, idx):  
-        return torch.tensor(self.features[idx], dtype=torch.float32)
+# Define a function to get the list of artists from text files
+def get_artists_from_files():
+    artists = []
+    for file_name in os.listdir(input_dir):
+        if file_name.endswith('.txt'):
+            # Extract artist name from file name
+            artist_name = file_name.replace('.txt', '').replace('_', ' ')
+            artists.append(artist_name)
+    return artists
 
-# Connect to MongoDB and fetch features
-def get_features_from_mongodb():
-    client = MongoClient('localhost', 27017)
-    db = client['audio_features']
-    collection = db['features']
-    data = list(collection.find({}, {'_id': 0, 'mfcc': 1, 'spectral_centroid': 1, 'zero_crossing_rate': 1}))
-    if not data:
-        print("No data retrieved from MongoDB.")
+def parse_recommendations(file_path):
+    recommendations = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        track_info = {}
+        for line in lines:
+            if line.strip():  # Check if line is not empty
+                key_value = line.split(': ')
+                if len(key_value) == 2:
+                    key, value = key_value
+                    track_info[key.strip()] = value.strip()
+                else:
+                    # Append the previous track_info to recommendations
+                    if track_info:
+                        recommendations.append(track_info)
+                    # Start a new track_info
+                    track_info = {}
+        # Append the last track_info
+        if track_info:
+            recommendations.append(track_info)
+    return recommendations
+
+def get_recommendations_from_file(artist_name):
+    file_name = artist_name + '.txt'  # Construct the file name
+    file_path = os.path.join(input_dir, file_name)  # Construct the file path
+    recommendations = parse_recommendations(file_path)  # Parse recommendations from the file
+    return recommendations
+
+@app.route('/')
+def home():
+    """
+    Home page route.
+    Displays a list of artists.
+    """
+    # Get the list of artists from text files
+    artists = get_artists_from_files()
+    return render_template('home_page.html', artists=artists)
+
+@app.route('/recommendations/<artist_name>')
+def recommendations(artist_name):
+    """
+    Recommendations page route.
+    Displays recommendations for the selected artist.
+    """
+
+    recommendations_data = get_recommendations_from_file(artist_name)
+    if recommendations_data:
+        return render_template('recommendations.html', artist_name=artist_name, recommendations_data=recommendations_data)
     else:
-        print(f"Retrieved {len(data)} records.")
+        return f"No recommendations available for {artist_name}."
+        
+from flask import send_file
 
-    features = [np.concatenate([item['mfcc'], item['spectral_centroid'], item['zero_crossing_rate']])
-                for item in data if 'mfcc' in item and 'spectral_centroid' in item and 'zero_crossing_rate' in item]
+@app.route('/streaming/<track_id>')
+def streaming(track_id):
+    """
+    Streaming page route.
+    Streams the audio file corresponding to the given track ID.
+    """
+    formatted_track_id = track_id.zfill(6)
+    audio_file_path = f"/home/tabidah/kafka/project/sample_audio/{formatted_track_id}.mp3"
+    return send_file(audio_file_path, mimetype='audio/mpeg')
     
-    return np.array(features)
+@app.route('/audio/<path:filename>')
+def download_file(filename):
+    return send_from_directory('/home/tabidah/kafka/project/sample_audio', filename)
 
-# Train the Embedding Model
-def train_embedding_model(features, epochs=10, batch_size=16):
-    dataset = SongFeaturesDataset(features)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    model = FeatureEmbeddingModel(input_dim=features.shape[1])
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    model.train()
-    for epoch in range(epochs):
-        for data in dataloader:
-            optimizer.zero_grad()
-            outputs = model(data)
-            loss = criterion(outputs, data)
-            loss.backward()
-            optimizer.step()
-        print(f"Epoch {epoch+1}, Loss: {loss.item()}")
-    return model
-
-# Recommend Songs
-def recommend_songs(model, features, song_index, top_n=5):
-    model.eval()
-    with torch.no_grad():
-        embeddings = model(torch.tensor(features, dtype=torch.float32)).numpy()
-    song_embedding = embeddings[song_index]
-    similarities = np.dot(embeddings, song_embedding)
-    most_similar_ids = np.argsort(similarities)[::-1][1:top_n+1]
-    return most_similar_ids
-
-# Function to fetch and stream music
-def fetch_and_stream_music(song_id):
-    audio_file_path = f"/home/asmariaz/Downloads/amna-project/sampled_audio_1gb/{song_id}.mp3"  # Update the path
-    try:
-        audio = AudioSegment.from_file(audio_file_path)
-    except FileNotFoundError:
-        return Response("File not found", status=404)
-
-    raw_audio_data = audio.raw_data
-    mimetype = 'audio/mpeg'
-
-    # Return audio data as a Flask Response
-    return Response(raw_audio_data, mimetype=mimetype)
-
-# Main function
-def main():
-    features = get_features_from_mongodb()
-    if features.size == 0:
-        print("No features to train on. Exiting...")
-        return
-    print(f"Features shape: {features.shape}")
-    model = train_embedding_model(features, epochs=10)
-    song_index = 1  
-    recommended_ids = recommend_songs(model, features, song_index)
-    print("Recommended Song IDs:", recommended_ids)
-
-@app.route('/recommendations/<user_id>')
-def recommendations(user_id):
-    main()
-    client = MongoClient('localhost', 27017)
-    db = client['audio_feature']
-    collection = db['features']
-
-    # Query MongoDB to fetch recommendations for the given user_id
-    user_recommendations = collection.find_one({'user_id': user_id}, {'_id': 0, 'recommendations': 1})
-
-    # Extract recommendations from the query result
-    if user_recommendations:
-        return user_recommendations.get('recommendations', [])  # Return recommendations if found
-    else:
-        return []  # Return an empty list if no recommendations found
-
-# Route for the streaming page
-@app.route('/streaming/<song_id>')
-def streaming(song_id):
-    # Logic to fetch and stream music
-    audio_response = fetch_and_stream_music(song_id)
-    return audio_response
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
