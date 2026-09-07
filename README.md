@@ -238,10 +238,6 @@ Then open the app in your browser to explore recommendations and stream tracks.
 | **Data scalability** — the FMA dataset is large, and loading/processing it naively didn't scale | Used Apache Spark for distributed loading and MongoDB for flexible, queryable metadata storage |
 | **Feature selection** — determining which audio features actually improved recommendation quality | Ran extensive testing and validation across MFCC, spectral centroid, and zero-crossing rate combinations to identify the most informative feature set |
 
-## Results
-
-*(Add a short summary here — e.g., how many tracks were processed, embedding dimensionality, qualitative examples of recommended songs, or any evaluation metrics you tracked.)*
-
 ## Future Work
 
 - Integrate more sophisticated recommendation algorithms (e.g., collaborative filtering, hybrid models)
