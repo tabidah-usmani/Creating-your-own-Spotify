@@ -256,7 +256,3 @@ Then open the app in your browser to explore recommendations and stream tracks.
 - **Tabidah Usmani**
 
 Developed as part of the **DS2004 – Fundamentals of Big Data Analytics** course.
-
-## License
-
-*(Add a license here, e.g., MIT, if you intend this repo to be reused by others.)*
